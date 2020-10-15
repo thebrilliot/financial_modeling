@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 10/07/2020, Wednesday, 3:00 - 4:00, Landon and Sean, 60 mins
 Driver order and time length:
 Landon, 40 minutes
 Sean, 20 minutes
 
-10/08/2020, Thursday, , Landon and Sean, __ mins
-Sean, 
-=======
-10.7.2020.Wed 3:00
-Landon and Sean
-Landon- 30
-Sean-20
->>>>>>> a3a1871776c85f867b24e975288ab4303387926f
+10/08/2020, Thursday,5:45 - 7:00 , Landon and Sean, 75 mins
+Driver order and time length:
+Sean, 45 mins
+Landon, 30 mins
