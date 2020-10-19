@@ -10,4 +10,9 @@ Landon, 30 mins
 
 10/17/2020, Saturday, 8:30 - 9:30 a.m., Landon and Sean, 60 mins
 Driver order and time length:
-Sean, 
+Sean, 30 mins
+Landon, 30 mins
+
+10/19/20, Monday, 3:20-4:00 p.m., Landon and Sean, 60 min
+Drive order and time lenth:
+Landon, 60mins
