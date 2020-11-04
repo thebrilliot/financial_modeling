@@ -13,6 +13,10 @@ Driver order and time length:
 Sean, 30 mins
 Landon, 30 mins
 
-10/19/20, Monday, 3:20-4:00 p.m., Landon and Sean, 60 min
-Drive order and time lenth:
-Landon, 60mins
+10/19/20, Monday, 3:20-4:00 p.m., Landon and Sean, 40 min
+Drive order and time length:
+Landon, 40 mins
+
+10/28/20, Wednesday, 3:20-4:00 p.m., Landon and Sean, 40 min
+Drive order and time length:
+Sean, 40 mins
