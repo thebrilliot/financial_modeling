@@ -1,64 +1,45 @@
-
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, binom
+import matplotlib.pyplot as plt
 import random
 
 # Takes spot price, strike price, discount rate, length of time, # of periods, dividends, and sigma (volatility)
 # Returns the European pricing of a call or put option
 
-def european_binomial_pricer(spot,strike,rate,time,nper:int,div,sigma,option='call'):
-    kind = 'european'
-    u = get_u(rate,time/nper,div,sigma)
-    d = get_d(rate,time/nper,div,sigma)
-    payoffs = future_payoffs(spot,strike,u,d,time,nper,option=option)
-    return value(payoffs[:-1],payoffs[1:],u,d,rate,time,kind=kind,option=option)
+def european_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, option='call') -> float:
+    h = expiry/num
+    u = get_u(rate,h,div,vol)
+    d = get_d(rate,h,div,vol)
+    vals = future_payoffs(spot,strike,u,d,num,option=option)
+    while vals.shape[0] > 1:
+        vals = value(vals[:-1],vals[1:],u,d,rate,h)
+    return vals[0]
 
-def european_binomial_call(spot,strike,rate,time,nper,div,sigma):
-    return european_binomial_pricer(spot,strike,rate,time,nper,div,sigma,option='call')
+def american_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, option='call') -> float:
+    h = expiry/num
+    u = get_u(rate,h,div,vol)
+    d = get_d(rate,h,div,vol)
+    vals = future_payoffs(spot,strike,u,d,num,option=option)
+    while vals.shape[0] > 1:
+        vals = value(vals[:-1],vals[1:],u,d,rate,h)
+        exercise = future_payoffs(spot,strike,u,d,vals.shape[0]-1,option=option)
+        vals = np.maximum(vals, exercise)
+    return vals[0]
 
-def european_binomial_put(spot,strike,rate,time,nper,div,sigma):
-    return european_binomial_pricer(spot, strike, rate, time, nper, div, sigma,option='put')
+def value(c_u, c_d, u, d, rate, h) -> float:
+    vals = np.exp(-rate*h)*(c_u*(np.exp(rate*h)-d)+c_d*(u-np.exp(rate*h)))/(u-d)
+    return vals
 
-def american_binomial_pricer(spot,strike,rate,time,nper:int,div,sigma,option='call'):
-    kind = 'american'
-    u = get_u(rate,time/nper,div,sigma)
-    d = get_d(rate,time/nper,div,sigma)
-    payoffs = future_payoffs(spot,strike,u,d,time,nper,option=option)
-    return value(payoffs[:-1],payoffs[1:],u,d,rate,time,kind=kind,option=option,spot=spot,strike=strike)
-
-def american_binomial_call(spot,strike,rate,time,nper:int,div,sigma):
-    return american_binomial_pricer(spot,strike,rate,time,nper,div,sigma,option='call')
-
-def american_binomial_put(spot,strike,rate,time,nper:int,div,sigma):
-    return american_binomial_pricer(spot,strike,rate,time,nper,div,sigma,option='put')
-
-def value(c_u, c_d, u, d, rate, time, kind = 'european', option = 'call', spot = 0, strike = 0) -> float:
-    vals = np.exp(-rate*time)*(c_u*(np.exp(rate*time)-d)+c_d*(u-np.exp(rate*time)))/(u-d)
-    if kind == 'american':
-        new_vals = np.maximum(future_payoffs(spot,strike,u,d,time,vals.shape[0]-1,option=option),vals)
-        # print(vals)
-        # print(new_vals)
-        for foo in vals != new_vals:
-            if foo:
-                print(f'Early exercise')
-        vals = new_vals
-    if vals.shape[0] == 1:
-        return vals[0]
-    elif vals.shape[0] == 0:
-        return None
-    else:
-        return value(vals[:-1],vals[1:],u,d,rate,time,kind=kind,option=option,spot=spot,strike=strike)
-
-def future_payoffs(spot,strike,u,d,time,nper,option='call'):
+def future_payoffs(spot,strike,u,d,num,option='call'):
     if option == 'call':
-        return call_payoff(future_stocks(spot,strike,u,d,time,nper),strike)
+        return call_payoff(future_stocks(spot,strike,u,d,num),strike)
     elif option == 'put':
-        return put_payoff(future_stocks(spot,strike,u,d,time,nper),strike)
+        return put_payoff(future_stocks(spot,strike,u,d,num),strike)
     else:
         return None
     
-def future_stocks(spot,strike,u,d,time,nper):
-    return np.array([spot*u**(nper-i)*d**i for i in range(nper+1)])
+def future_stocks(spot,strike,u,d,num):
+    return np.array([spot*u**(num-i)*d**i for i in range(num+1)])
 
 def call_payoff(spot,strike):
     return np.maximum(0,spot-strike)
@@ -66,36 +47,46 @@ def call_payoff(spot,strike):
 def put_payoff(spot,strike):
     return np.maximum(0,strike-spot)
 
-def get_u(rate,time,div,sigma):
-    return np.exp((rate-div)*time*sigma+sigma*np.sqrt(time))
+def get_u(rate,h,div,vol):
+    return np.exp((rate-div)*h*vol+vol*np.sqrt(h))
 
-def get_d(rate,time,div,sigma):
-    return np.exp((rate-div)*time*sigma-sigma*np.sqrt(time))
+def get_d(rate,h,div,vol):
+    return np.exp((rate-div)*h*vol-vol*np.sqrt(h))
 
-    
-def black_scholes_pricer(spot,strike,rate,time,div,sigma,option='call'):
-    d1 = get_d1(spot,strike,rate,time,div,sigma)
-    d2 = get_d2(d1,time,sigma)
-    fn = bs_call if option == 'call' else bs_put
-    return fn(spot,strike,d1,d2,rate,time,div,sigma)
-
-def bs_call(spot,strike,d1,d2,rate,time,div,sigma):
-    return spot*np.exp(-div*time)*norm.cdf(d1)-strike*np.exp(-rate*time)*norm.cdf(d2)
-
-def bs_put(spot,strike,d1,d2,rate,time,div,sigma):
-    return strike*np.exp(-rate*time)*norm.cdf(-d2)-spot*np.exp(-div*time)*norm.cdf(-d1)
-
-def get_d1(spot,strike,rate,time,div,sigma):
-    return (np.log(strike/spot) + (rate-div+.5*sigma**2)*time)/(sigma*np.sqrt(time))
-
-def get_d2(d1,time,sigma):
-    return d1-sigma*np.sqrt(time)
+spot = 105
+strike = 100
+expiry = 1
+rate = .08
+div = 0.
+vol = .2
+num = 2
+option = 'call'
 
 
-def binomial_path(spot,rate,time,nper,div,sigma):
-    u = get_u(rate,time/nper,div,sigma)
-    d = get_d(rate,time/nper,div,sigma)
-    updowns = random.choices([0,1],k=nper)
+
+def black_scholes_call(spot, strike, expiry, rate, div, vol) -> float:
+    d1 = get_d1(spot, strike, expiry, rate, div, vol)
+    d2 = get_d2(d1,expiry,vol)
+    return (spot * np.exp(-div * expiry) * norm.cdf(d1)) - (strike * np.exp(-rate * expiry) * norm.cdf(d2))
+
+def black_scholes_put(spot, strike, expiry, rate, div, vol) -> float:
+    d1 = get_d1(spot,strike,expiry,rate,div,vol)
+    d2 = get_d2(d1,expiry,vol)
+    return (strike * np.exp(-rate * expiry) * norm.cdf(-d2)) - (spot * np.exp(-div * expiry) * norm.cdf(-d1))
+
+def get_d1(spot, strike, expiry, rate, div, vol):
+    return (np.log(strike/spot) + (rate - div + 0.5 * vol * vol) * expiry) / (vol * np.sqrt(expiry))
+
+def get_d2(d1,expiry,vol):
+    return d1 - vol * np.sqrt(expiry)
+
+
+
+def binomial_path(spot,expiry,rate,num,div,vol):
+    h = expiry/num
+    u = get_u(rate,h,div,vol)
+    d = get_d(rate,h,div,vol)
+    updowns = random.choices([0,1],k=num)
     path = [spot]
     for move in updowns:
         path.append(path[-1]*u**move*d**(1-move))
@@ -104,3 +95,8 @@ def binomial_path(spot,rate,time,nper,div,sigma):
 
 def parity():
     pass
+
+## Delta - I literally have no idea what this is for
+def black_scholes_call_delta(spot: float, strike: float, tau: float, rate: float, div: float, vol: float) -> float:
+    d1 = (np.log(spot/strike) + (rate - div + 0.5 * vol * vol) * tau) / (vol * np.sqrt(tau))
+    return np.exp(-div * tau) * norm.cdf(d1)
