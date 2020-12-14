@@ -6,13 +6,14 @@ import random
 # Takes spot price, strike price, discount rate, length of time, # of periods, dividends, and sigma (volatility)
 # Returns the European pricing of a call or put option
 
+# I was using a recursive function before I started, but this ended up being easier
 def european_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, option='call') -> float:
     h = expiry/num
     u = get_u(rate,h,div,vol)
     d = get_d(rate,h,div,vol)
     vals = future_payoffs(spot,strike,u,d,num,option=option)
     while vals.shape[0] > 1:
-        vals = value(vals[:-1],vals[1:],u,d,rate,h)
+        vals = value(spot,vals[:-1],vals[1:],u,d,h,rate,div)
     return vals[0]
 
 def american_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, option='call') -> float:
@@ -21,24 +22,37 @@ def american_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, opt
     d = get_d(rate,h,div,vol)
     vals = future_payoffs(spot,strike,u,d,num,option=option)
     while vals.shape[0] > 1:
-        vals = value(vals[:-1],vals[1:],u,d,rate,h)
+        vals = value(spot,vals[:-1],vals[1:],u,d,h,rate,div)
         exercise = future_payoffs(spot,strike,u,d,vals.shape[0]-1,option=option)
         vals = np.maximum(vals, exercise)
     return vals[0]
 
-def value(c_u, c_d, u, d, rate, h) -> float:
+# This is the magic function finding the value of options at a given node, works with entire layers of the binomial tree
+# I have both the Delta/B method and the exact method and I leave one commented
+def value(spot, c_u, c_d, u, d, h, rate, div) -> float:
+    #delta = get_delta(spot,c_u,c_d,u,d,h,div)
+    #b = get_b(c_u,c_d,u,d,h,rate)
+    #vals = delta*spot+b
     vals = np.exp(-rate*h)*(c_u*(np.exp(rate*h)-d)+c_d*(u-np.exp(rate*h)))/(u-d)
     return vals
 
+def get_delta(spot,c_u,c_d,u,d,h,div):
+    return np.exp(-div*h)*((c_u-c_d)/(spot*(u-d)))
+
+def get_b(c_u,c_d,u,d,h,rate):
+    return np.exp(-rate*h)*(u*c_d-d*c_u)/(u-d)
+
+# Future option payoffs
 def future_payoffs(spot,strike,u,d,num,option='call'):
     if option == 'call':
-        return call_payoff(future_stocks(spot,strike,u,d,num),strike)
+        return call_payoff(future_stocks(spot,u,d,num),strike)
     elif option == 'put':
-        return put_payoff(future_stocks(spot,strike,u,d,num),strike)
+        return put_payoff(future_stocks(spot,u,d,num),strike)
     else:
         return None
     
-def future_stocks(spot,strike,u,d,num):
+# Future stock prices
+def future_stocks(spot,u,d,num) -> np.ndarray:
     return np.array([spot*u**(num-i)*d**i for i in range(num+1)])
 
 def call_payoff(spot,strike):
@@ -52,16 +66,6 @@ def get_u(rate,h,div,vol):
 
 def get_d(rate,h,div,vol):
     return np.exp((rate-div)*h*vol-vol*np.sqrt(h))
-
-spot = 105
-strike = 100
-expiry = 1
-rate = .08
-div = 0.
-vol = .2
-num = 2
-option = 'call'
-
 
 
 def black_scholes_call(spot, strike, expiry, rate, div, vol) -> float:
@@ -93,10 +97,10 @@ def binomial_path(spot,expiry,rate,num,div,vol):
     return np.array(path)
 
 
-def parity():
-    pass
+def parity(spot,strike,expiry,rate):
+    return spot-strike*np.exp(-rate*expiry)
 
 ## Delta - I literally have no idea what this is for
-def black_scholes_call_delta(spot: float, strike: float, tau: float, rate: float, div: float, vol: float) -> float:
-    d1 = (np.log(spot/strike) + (rate - div + 0.5 * vol * vol) * tau) / (vol * np.sqrt(tau))
-    return np.exp(-div * tau) * norm.cdf(d1)
+    #def black_scholes_call_delta(spot: float, strike: float, tau: float, rate: float, div: float, vol: float) -> float:
+    #d1 = (np.log(spot/strike) + (rate - div + 0.5 * vol * vol) * tau) / (vol * np.sqrt(tau))
+    #return np.exp(-div * tau) * norm.cdf(d1)
