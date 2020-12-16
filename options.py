@@ -30,11 +30,21 @@ def american_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, opt
 # This is the magic function finding the value of options at a given node, works with entire layers of the binomial tree
 # I have both the Delta/B method and the exact method and I leave one commented
 def value(spot, c_u, c_d, u, d, h, rate, div) -> float:
+    #Delta*Spot+B
     #delta = get_delta(spot,c_u,c_d,u,d,h,div)
     #b = get_b(c_u,c_d,u,d,h,rate)
     #vals = delta*spot+b
-    vals = np.exp(-rate*h)*(c_u*(np.exp(rate*h)-d)+c_d*(u-np.exp(rate*h)))/(u-d)
+    
+    #Risk-neutral format
+    p_star = get_p_star(u,d,h,rate,div)
+    vals = np.exp(-rate*h)*(c_u*p_star+c_d*(1-p_star))
+    
+    #Exact equation
+    #vals = np.exp(-rate*h)*(c_u*(np.exp((rate-div)*h)-d)+c_d*(u-np.exp((rate-div)*h)))/(u-d)
     return vals
+
+def get_p_star(u,d,h,rate,div):
+    return (np.exp((rate-div)*h)-d)/(u-d)
 
 def get_delta(spot,c_u,c_d,u,d,h,div):
     return np.exp(-div*h)*((c_u-c_d)/(spot*(u-d)))
@@ -53,7 +63,7 @@ def future_payoffs(spot,strike,u,d,num,option='call'):
     
 # Future stock prices
 def future_stocks(spot,u,d,num) -> np.ndarray:
-    return np.array([spot*u**(num-i)*d**i for i in range(num+1)])
+    return np.array([spot*u**(num-i)*(d**i) for i in range(num+1)])
 
 def call_payoff(spot,strike):
     return np.maximum(0,spot-strike)
@@ -62,10 +72,10 @@ def put_payoff(spot,strike):
     return np.maximum(0,strike-spot)
 
 def get_u(rate,h,div,vol):
-    return np.exp((rate-div)*h*vol+vol*np.sqrt(h))
+    return np.exp((rate-div)*h+vol*np.sqrt(h))
 
 def get_d(rate,h,div,vol):
-    return np.exp((rate-div)*h*vol-vol*np.sqrt(h))
+    return np.exp((rate-div)*h-vol*np.sqrt(h))
 
 
 def black_scholes_call(spot, strike, expiry, rate, div, vol) -> float:
@@ -99,6 +109,7 @@ def binomial_path(spot,expiry,rate,num,div,vol):
 
 def parity(spot,strike,expiry,rate):
     return spot-strike*np.exp(-rate*expiry)
+    #return (spot*np.exp(rate*expiry)-strike)*np.exp(-rate*expiry)
 
 ## Delta - I literally have no idea what this is for
     #def black_scholes_call_delta(spot: float, strike: float, tau: float, rate: float, div: float, vol: float) -> float:
