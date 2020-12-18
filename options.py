@@ -95,15 +95,16 @@ def binomial_path(spot,expiry,rate,div,vol,num):
     h = expiry/num
     u = get_u(rate,h,div,vol)
     d = get_d(rate,h,div,vol)
-    updowns = random.choices([0,1],k=num)
-    path = [spot]
-    for move in updowns:
+    updowns = random.choices([0,1],k=num) # List of random ones and zeroes
+    path = [spot]                         # 1 is an up-move, 0 is a down-move
+    for move in updowns:                  # The last value time u if it's an up-move and times d if it's a down-move
         path.append(path[-1]*u**move*d**(1-move))
     return np.array(path)
 
 
 def parity(spot,strike,expiry,rate):
     return spot-strike*np.exp(-rate*expiry)
+    # Or if you want to go by the formula in the book:
     #return (spot*np.exp(rate*expiry)-strike)*np.exp(-rate*expiry)
 
 ## Delta - I literally have no idea what this is for
