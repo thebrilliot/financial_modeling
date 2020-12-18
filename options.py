@@ -78,25 +78,20 @@ def get_d(rate,h,div,vol):
     return np.exp((rate-div)*h-vol*np.sqrt(h))
 
 
-def black_scholes_call(spot, strike, expiry, rate, div, vol) -> float:
-    d1 = get_d1(spot, strike, expiry, rate, div, vol)
-    d2 = get_d2(d1,expiry,vol)
+
+def black_scholes_call(spot: float, strike: float, expiry: float, rate: float, div: float, vol: float) -> float:
+    d1 = (np.log(spot/strike) + (rate - div + 0.5 * vol * vol) * expiry) / (vol * np.sqrt(expiry))
+    d2 = d1 - vol * np.sqrt(expiry) 
     return (spot * np.exp(-div * expiry) * norm.cdf(d1)) - (strike * np.exp(-rate * expiry) * norm.cdf(d2))
 
-def black_scholes_put(spot, strike, expiry, rate, div, vol) -> float:
-    d1 = get_d1(spot,strike,expiry,rate,div,vol)
-    d2 = get_d2(d1,expiry,vol)
+def black_scholes_put(spot: float, strike: float, expiry: float, rate: float, div: float, vol: float) -> float:
+    d1 = (np.log(spot/strike) + (rate - div + 0.5 * vol * vol) * expiry) / (vol * np.sqrt(expiry))
+    d2 = d1 - vol * np.sqrt(expiry) 
     return (strike * np.exp(-rate * expiry) * norm.cdf(-d2)) - (spot * np.exp(-div * expiry) * norm.cdf(-d1))
 
-def get_d1(spot, strike, expiry, rate, div, vol):
-    return (np.log(strike/spot) + (rate - div + 0.5 * vol * vol) * expiry) / (vol * np.sqrt(expiry))
-
-def get_d2(d1,expiry,vol):
-    return d1 - vol * np.sqrt(expiry)
 
 
-
-def binomial_path(spot,expiry,rate,num,div,vol):
+def binomial_path(spot,expiry,rate,div,vol,num):
     h = expiry/num
     u = get_u(rate,h,div,vol)
     d = get_d(rate,h,div,vol)
