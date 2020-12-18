@@ -30,6 +30,7 @@ def american_binomial_pricer(spot, strike, expiry, rate, div, vol, num: int, opt
 # This is the magic function finding the value of options at a given node, works with entire layers of the binomial tree
 # I have both the Delta/B method and the exact method and I leave one commented
 def value(spot, c_u, c_d, u, d, h, rate, div) -> float:
+    
     #Delta*Spot+B
     #delta = get_delta(spot,c_u,c_d,u,d,h,div)
     #b = get_b(c_u,c_d,u,d,h,rate)
@@ -41,6 +42,7 @@ def value(spot, c_u, c_d, u, d, h, rate, div) -> float:
     
     #Exact equation
     #vals = np.exp(-rate*h)*(c_u*(np.exp((rate-div)*h)-d)+c_d*(u-np.exp((rate-div)*h)))/(u-d)
+    
     return vals
 
 def get_p_star(u,d,h,rate,div):
@@ -91,14 +93,24 @@ def black_scholes_put(spot: float, strike: float, expiry: float, rate: float, di
 
 
 
-def binomial_path(spot,expiry,rate,div,vol,num):
+def binomial_path(spot,expiry,u,d,num):
     h = expiry/num
-    u = get_u(rate,h,div,vol)
-    d = get_d(rate,h,div,vol)
-    updowns = random.choices([0,1],k=num) # List of random ones and zeroes
+    updowns = np.random.choice([0,1],size=(num,))
+    # print(updowns.mean())
+    # updowns = random.choices([0,1],k=num) # List of random ones and zeroes
     path = [spot]                         # 1 is an up-move, 0 is a down-move
-    for move in updowns:                  # The last value time u if it's an up-move and times d if it's a down-move
-        path.append(path[-1]*u**move*d**(1-move))
+    for move in updowns:                  # The last value times u if it's an up-move and times d if it's a down-move
+        path.append(path[-1]*(u if bool(move) else d))  # Conditional statement
+        # path.append(path[-1]*u**move*d**(1-move))     # Branchless version
+                # Conditional statement versus branchless version makes no difference
+    return np.array(path)
+
+def normal_path(spot,expiry,rate,div,vol,num):
+    h = expiry/num
+    path = [spot]
+    factors = np.exp((rate-div)*h)+np.random.normal(0,vol,(num,))*np.sqrt(h)
+    for factor in factors:
+        path.append(path[-1]*factor)
     return np.array(path)
 
 
